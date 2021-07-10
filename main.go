@@ -82,6 +82,9 @@ func main() {
 		"ITUB4",
 		"NVDC34",
 		"TSLA34",
+		"CVCB3",
+		"FBOK34",
+		"IVVB11",
 	}
 	args := os.Args[1:]
 	var tojson bool
