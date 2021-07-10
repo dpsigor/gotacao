@@ -11,6 +11,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/jedib0t/go-pretty/v6/table"
 )
@@ -25,6 +26,51 @@ type Cotacao struct {
 
 var r = regexp.MustCompile(`YMlKec fxKbKc[\w\W\n]+?>R\$(?P<price>.+?)<[\w\W\n]+?last closing price<[\w\W\n]+?P6K39c">R\$(?P<prevClose>.+?)<[\w\W\n]+?P6K39c">R\$(?P<minmax>.+?)<`)
 var rminmax = regexp.MustCompile(`R\$`)
+
+func contains(s []string, str string) bool {
+	for _, v := range s {
+		if v == str {
+			return true
+		}
+	}
+	return false
+}
+
+func idxof(s []string, str string) int {
+	for i, v := range s {
+		if v == str {
+			return i
+		}
+	}
+	return -1
+}
+
+func rmel(s []string, str string) []string {
+	if len(s) > 1 {
+		idx := idxof(s, str)
+		s = append(s[:idx], s[idx+1:]...)
+	} else {
+		s = []string{}
+	}
+	return s
+}
+
+func hdlargs(args []string) ([]string, bool, bool, time.Time) {
+	var start time.Time
+	var tojson bool
+	if len(args) > 0 && contains(args, "-j") {
+		tojson = true
+		args = rmel(args, "-j")
+	}
+
+	var dotime bool
+	if len(args) > 0 && contains(args, "-t") {
+		dotime = true
+		start = time.Now()
+		args = rmel(args, "-t")
+	}
+	return args, tojson, dotime, start
+}
 
 func parseHTML(ticker string, body []byte) (Cotacao, error) {
 	m := r.FindSubmatch(body)
@@ -87,16 +133,8 @@ func main() {
 		"IVVB11",
 	}
 	args := os.Args[1:]
-	var tojson bool
 
-	if len(args) > 0 && args[0] == "-j" {
-		tojson = true
-		if len(args) > 1 {
-			args = args[1:]
-		} else {
-			args = []string{}
-		}
-	}
+	args, tojson, dotime, start := hdlargs(args)
 
 	if len(args) > 100 {
 		log.Fatal("Máximo 100 por vez")
@@ -148,5 +186,9 @@ func main() {
 			log.Fatal(err)
 		}
 		fmt.Println(string(j))
+	}
+
+	if dotime {
+		fmt.Printf("%s demorou %v para %v tickers\n", "gotacao", time.Since(start), len(tickers))
 	}
 }
