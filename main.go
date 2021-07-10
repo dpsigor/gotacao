@@ -1,28 +1,33 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"regexp"
+	"sort"
 	"strings"
 	"sync"
 
 	"github.com/jedib0t/go-pretty/v6/table"
 )
 
-var rminmax *regexp.Regexp = regexp.MustCompile(`R\$`)
+type Cotacao struct {
+	Ticker    string `json:"ticker"`
+	Min       string `json:"min"`
+	Price     string `json:"price"`
+	Max       string `json:"max"`
+	PrevClose string `json:"prev_close"`
+}
 
-func reqCotacao(ticker string, r *regexp.Regexp) (table.Row, error) {
-	resp, err := http.Get("https://www.google.com/finance/quote/" + ticker + ":BVMF")
-	if err != nil {
-		log.Print(err)
-		return nil, err
-	}
-	b, _ := ioutil.ReadAll(resp.Body)
-	m := r.FindSubmatch(b)
+var r = regexp.MustCompile(`YMlKec fxKbKc[\w\W\n]+?>R\$(?P<price>.+?)<[\w\W\n]+?last closing price<[\w\W\n]+?P6K39c">R\$(?P<prevClose>.+?)<[\w\W\n]+?P6K39c">R\$(?P<minmax>.+?)<`)
+var rminmax = regexp.MustCompile(`R\$`)
+
+func parseHTML(ticker string, body []byte) (Cotacao, error) {
+	m := r.FindSubmatch(body)
 
 	var min string
 	var price string
@@ -47,12 +52,27 @@ func reqCotacao(ticker string, r *regexp.Regexp) (table.Row, error) {
 		}
 	}
 
-	row := table.Row{ticker, min, price, max, prevClose}
-	return row, nil
+	cotacao := Cotacao{
+		Ticker:    ticker,
+		Min:       min,
+		Price:     price,
+		Max:       max,
+		PrevClose: prevClose,
+	}
+	return cotacao, nil
+}
+
+func reqCotacao(ticker string) (Cotacao, error) {
+	resp, err := http.Get("https://www.google.com/finance/quote/" + ticker + ":BVMF")
+	if err != nil {
+		log.Print(err)
+		return Cotacao{}, err
+	}
+	b, _ := ioutil.ReadAll(resp.Body)
+	return parseHTML(ticker, b)
 }
 
 func main() {
-	r := regexp.MustCompile(`YMlKec fxKbKc[\w\W\n]+?>R\$(?P<price>.+?)<[\w\W\n]+?last closing price<[\w\W\n]+?P6K39c">R\$(?P<prevClose>.+?)<[\w\W\n]+?P6K39c">R\$(?P<minmax>.+?)<`)
 	// petr4 itub4 b3sa3 bkbr3 aapl34 tsla34 amzo34 gogl34 cmig4 bbas3 bbdc4
 	tickers := []string{
 		"AAPL34",
@@ -64,6 +84,16 @@ func main() {
 		"TSLA34",
 	}
 	args := os.Args[1:]
+	var tojson bool
+
+	if len(args) > 0 && args[0] == "-j" {
+		tojson = true
+		if len(args) > 1 {
+			args = args[1:]
+		} else {
+			args = []string{}
+		}
+	}
 
 	if len(args) > 100 {
 		log.Fatal("Máximo 100 por vez")
@@ -76,28 +106,44 @@ func main() {
 		}
 	}
 
+	var cotacoes []Cotacao
+
 	var wg sync.WaitGroup
-
-	var rows []table.Row
-
 	for _, v := range tickers {
 		wg.Add(1)
 		go func(v string) {
 			defer wg.Done()
-			row, err := reqCotacao(v, r)
+			c, err := reqCotacao(v)
 			if err != nil {
 				fmt.Println(err)
 				return
 			}
-			rows = append(rows, row)
+			cotacoes = append(cotacoes, c)
 		}(v)
 	}
-
 	wg.Wait()
-	t := table.NewWriter()
-	t.SetOutputMirror(os.Stdout)
-	headers := table.Row{"Ticker", "Min", "Price", "Max", "PrevClose"}
-	t.AppendHeader(headers)
-	t.AppendRows(rows)
-	t.Render()
+
+	sort.Slice(cotacoes, func(a, b int) bool {
+		return cotacoes[a].Ticker < cotacoes[b].Ticker
+	})
+
+	if !tojson {
+		var rows []table.Row
+		for _, c := range cotacoes {
+			row := table.Row{c.Ticker, c.Min, c.Price, c.Max, c.PrevClose}
+			rows = append(rows, row)
+		}
+		t := table.NewWriter()
+		t.SetOutputMirror(os.Stdout)
+		headers := table.Row{"Ticker", "Min", "Price", "Max", "PrevClose"}
+		t.AppendHeader(headers)
+		t.AppendRows(rows)
+		t.Render()
+	} else {
+		j, err := json.Marshal(cotacoes)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println(string(j))
+	}
 }
