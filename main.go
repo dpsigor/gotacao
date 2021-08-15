@@ -24,7 +24,7 @@ type Cotacao struct {
 	PrevClose string `json:"prev_close"`
 }
 
-var r = regexp.MustCompile(`YMlKec fxKbKc[\w\W\n]+?>R\$(?P<price>.+?)<[\w\W\n]+?last closing price<[\w\W\n]+?P6K39c">R\$(?P<prevClose>.+?)<[\w\W\n]+?P6K39c">R\$(?P<minmax>.+?)<`)
+var r = regexp.MustCompile(`YMlKec fxKbKc[\w\W\n]+?>R\$(?P<price>.+?)<[\w\W\n]+?last closing price<[\w\W\n]+?M2CUtd">R\$(?P<prevClose>.+?)<[\w\W\n]+?M2CUtd">R\$(?P<minmax>.+?)<`)
 var rminmax = regexp.MustCompile(`R\$`)
 
 func contains(s []string, str string) bool {
@@ -108,14 +108,26 @@ func parseHTML(ticker string, body []byte) (Cotacao, error) {
 	return cotacao, nil
 }
 
-func reqCotacao(ticker string) (Cotacao, error) {
+func reqHTML(ticker string) ([]byte, error) {
 	resp, err := http.Get("https://www.google.com/finance/quote/" + ticker + ":BVMF")
 	if err != nil {
 		log.Print(err)
-		return Cotacao{}, err
+		return []byte{}, err
 	}
 	b, _ := ioutil.ReadAll(resp.Body)
-	return parseHTML(ticker, b)
+	return b, nil
+}
+
+func queryTicker(v string) (Cotacao, error) {
+	bhtml, err := reqHTML(v)
+	if err != nil {
+		return Cotacao{}, err
+	}
+	c, err := parseHTML(v, bhtml)
+	if err != nil {
+		return Cotacao{}, err
+	}
+	return c, nil
 }
 
 func main() {
@@ -154,7 +166,7 @@ func main() {
 		wg.Add(1)
 		go func(v string) {
 			defer wg.Done()
-			c, err := reqCotacao(v)
+			c, err := queryTicker(v)
 			if err != nil {
 				fmt.Println(err)
 				return
