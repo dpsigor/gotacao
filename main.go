@@ -9,11 +9,13 @@ import (
 	"os"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/jedib0t/go-pretty/v6/text"
 )
 
 type Cotacao struct {
@@ -183,15 +185,52 @@ func main() {
 	if !tojson {
 		var rows []table.Row
 		for _, c := range cotacoes {
-			row := table.Row{c.Ticker, c.Min, c.Price, c.Max, c.PrevClose}
+			prc, err := strconv.ParseFloat(c.Price, 32)
+			if err != nil {
+				prc = 0
+			}
+			prv, err := strconv.ParseFloat(c.PrevClose, 32)
+			if err != nil {
+				prv = 0
+			}
+			variacao := "0"
+			if prc != 0 && prv != 0 {
+				v := (prc - prv) * 100 / prv
+				if v < 0 {
+					variacao = fmt.Sprintf("\x1b[31m%v%%\x1b[0m", v)
+				} else {
+					variacao = fmt.Sprintf("%v%%", v)
+				}
+			}
+			row := table.Row{
+				c.Ticker,
+				fmt.Sprintf("%8v", c.Price),
+				fmt.Sprintf("%8v", c.Min),
+				fmt.Sprintf("%8v", c.Max),
+				fmt.Sprintf("%8v", c.PrevClose),
+				variacao,
+			}
 			rows = append(rows, row)
 		}
 		t := table.NewWriter()
 		t.SetOutputMirror(os.Stdout)
-		headers := table.Row{"Ticker", "Min", "Price", "Max", "PrevClose"}
+		headers := table.Row{"Ticker", "Price", "Min", "Max", "PrevClose"}
 		t.AppendHeader(headers)
 		t.AppendRows(rows)
+		t.SetStyle(table.Style{
+			Color: table.ColorOptions{
+				Header:       text.Colors{text.BgBlue},
+				Row:          text.Colors{text.BgGreen, text.FgBlack},
+				RowAlternate: text.Colors{text.BgYellow, text.FgBlack},
+			},
+			Box: table.BoxStyle{
+				PaddingLeft: "  ",
+				// PaddingRight: " ",
+			},
+		})
+		fmt.Println("")
 		t.Render()
+		fmt.Println("")
 	} else {
 		j, err := json.Marshal(cotacoes)
 		if err != nil {
