@@ -24,7 +24,7 @@ type Cotacao struct {
 	PrevClose string `json:"prev_close"`
 }
 
-var r = regexp.MustCompile(`YMlKec fxKbKc[\w\W\n]+?>R\$(?P<price>.+?)<[\w\W\n]+?last closing price<[\w\W\n]+?M2CUtd">R\$(?P<prevClose>.+?)<[\w\W\n]+?M2CUtd">R\$(?P<minmax>.+?)<`)
+var r = regexp.MustCompile(`(?s)YMlKec.+?>R\$(.+?)<.+?last closing price<.+?P6K39c">R\$(.+?)<.+?P6K39c">R\$(.+?)<`)
 var rminmax = regexp.MustCompile(`R\$`)
 
 func contains(s []string, str string) bool {
