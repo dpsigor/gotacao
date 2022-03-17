@@ -1,11 +1,15 @@
 module gotacao
 
-go 1.16
+go 1.18
 
 require (
-	github.com/go-openapi/strfmt v0.20.1 // indirect
-	github.com/jedib0t/go-pretty v4.3.0+incompatible // indirect
-	github.com/jedib0t/go-pretty/v6 v6.2.3 // indirect
+	github.com/dpsigor/sttrnty v0.0.0-20220317231541-b3264c8b51ea
+	github.com/jedib0t/go-pretty/v6 v6.2.7
+)
+
+require (
 	github.com/mattn/go-runewidth v0.0.13 // indirect
+	github.com/rivo/uniseg v0.2.0 // indirect
 	golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c // indirect
+	gopkg.in/yaml.v3 v3.0.0-20200605160147-a5ece683394c // indirect
 )
