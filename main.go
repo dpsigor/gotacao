@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dpsigor/sttrnty"
+	"github.com/dpsigor/hltrnty"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
 )
@@ -128,7 +128,7 @@ func makeRow(c Cotacao) table.Row {
 }
 
 func outputTable(cotacoes []Cotacao) {
-	rows := sttrnty.Map(cotacoes, makeRow)
+	rows := hltrnty.Map(cotacoes, makeRow)
 	t := table.NewWriter()
 	t.SetOutputMirror(os.Stdout)
 	headers := table.Row{"Ticker", "Price", "Min", "Max", "PrevClose"}
@@ -162,11 +162,11 @@ func main() {
 
 	tickers := defaultTickers
 	if len(args) > 0 {
-		tickers = sttrnty.Map(args, strings.ToUpper)
+		tickers = hltrnty.Map(args, strings.ToUpper)
 	}
 	start := time.Now()
 
-	cotacoes := sttrnty.ConcurMap(tickers, queryTicker)
+	cotacoes := hltrnty.ConcurMap(tickers, queryTicker)
 	sort.Slice(cotacoes, func(a, b int) bool {
 		return cotacoes[a].Ticker < cotacoes[b].Ticker
 	})

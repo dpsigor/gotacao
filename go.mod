@@ -3,7 +3,7 @@ module gotacao
 go 1.18
 
 require (
-	github.com/dpsigor/sttrnty v0.0.0-20220317231541-b3264c8b51ea
+	github.com/dpsigor/hltrnty v0.0.0-20220318004501-69b4873059ac
 	github.com/jedib0t/go-pretty/v6 v6.2.7
 )
 
